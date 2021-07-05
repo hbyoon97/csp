@@ -12,87 +12,88 @@ using namespace std;
 
 char* input;
 
-class KillerSudoku : public Script {
+class Nqueen : public Script {
   protected:
-    const int n = 9;
+    const int n = 4;
     IntVarArray x; //sudoku cell values??
   public: //home space
 
     // constructor
-    KillerSudoku(const SizeOptions& opt) : Script(opt), x(*this, 81, 1, 9) {
-        Matrix<IntVarArray> m(x, 9, 9);
-        ifstream infile(input);
-        if (infile.is_open() && infile.good()) {
-            string line;
-            while(getline(infile, line)){
-              IntVarArgs asdf; 
-              istringstream ss(line);
-              vector<int> tokens;
-              int word, cageSum, numCageCells;
-              // Tokenizing w.r.t. space ' '
-              while(ss >> word) tokens.push_back(word);
-              cageSum = tokens[0];
-              numCageCells = tokens[1];
-              for(int i = 2; i<tokens.size(); i+=2)
-                asdf << m(tokens[i]-1, tokens[i+1]-1);
-              linear(*this, asdf, IRT_EQ, cageSum);
-              distinct(*this, asdf, opt.ipl());
-            } 
-        } 
-
+    Nqueen(const SizeOptions& opt) : Script(opt), x(*this, n*n, 0, 1) {
+        Matrix<IntVarArray> m(x, n, n);
         // constraints for rows and columns
-        for(int i = 0; i<9; i++){
-          distinct(*this, m.row(i), opt.ipl());
-          distinct(*this, m.col(i), opt.ipl());
+        for(int i = 0; i<n; i++){
+          IntVarArgs iva1, iva2, iva3, iva4;
+          linear(*this, m.row(i), IRT_EQ, 1);
+          linear(*this, m.col(i), IRT_EQ, 1);
+
+          // //upper left
+          int k = i;
+          for(int j = 0; j<i+1 && k>=0; j++, k--){
+            iva1 << m(k , j);
+          } 
+
+          //upper right
+          k = i;
+          for(int j = 0; j<i+1 && k>=0; j++, k--){
+            iva2 << m(j, 3-k);
+          } 
+ 
+          //bottom right
+          k = i;
+          for(int a = 3; a>=3-i && k<3; a--, k--){
+            iva3 << m(a, 3-k);
+          }
+
+          //bottom left
+          k = 0;
+          for(int a = 3-i; a<=3 && k<=i; a++, k++){
+            iva4 << m(a, k);
+          }
+          linear(*this, iva1, IRT_LQ, 1);
+          linear(*this, iva2, IRT_LQ, 1);
+          linear(*this, iva3, IRT_LQ, 1);
+          linear(*this, iva4, IRT_LQ, 1);
         }
-
-    // Constraints for squares
-    for (int i=0; i<9; i+=3) {
-      for (int j=0; j<9; j+=3) {
-        distinct(*this, m.slice(i, i+3, j, j+3), opt.ipl());
-      }
-    }
-
     //branch (?)
-    branch(*this, x, INT_VAR_AFC_SIZE_MAX(opt.decay()), INT_VAL_MIN()); 
+    branch(*this, x, INT_VAR_SIZE_MIN(), INT_VAL_MIN());
     }
 
     //copy constructor
-    KillerSudoku(KillerSudoku& s) : Script(s), n(s.n) {
+    Nqueen(Nqueen& s) : Script(s), n(s.n) {
       x.update(*this, s.x);
     }
 
     //virtual copy 
     virtual Space* copy(void){
-      return new KillerSudoku(*this);
+      return new Nqueen(*this);
     }
 
      /// Print solution
   virtual void
   print(std::ostream& os) const {
     os << "  ";
-    for (int i = 0; i<81; i++) {
+    for (int i = 0; i<16; i++) {
       if (x[i].assigned()) {
-        if (x[i].val()<10)
+        if (x[i].val())
           os << x[i] << " ";
         else
-          os << (char)(x[i].val()+'A'-10) << " ";
+          os << (char)(x[i].val()) << " ";
       }
       else
         os << ". ";
-      if((i+1)%(9) == 0)
+      if((i+1)%(4) == 0)
         os << std::endl << "  ";
     }
     os << std::endl;
-  }   
+  } 
 };
 
 int main(int argc, char* argv[]) {
-  SizeOptions opt("KillerSudoku");
-  opt.ipl(IPL_DOM);
+  SizeOptions opt("Nqueen");
+  opt.ipl(IPL_VAL);
   opt.solutions(1);
   opt.parse(argc,argv);
-  input = argv[1];
-  Script::run<KillerSudoku,DFS,SizeOptions>(opt);
+  Script::run<Nqueen,DFS,SizeOptions>(opt);
   return 0;
 }
