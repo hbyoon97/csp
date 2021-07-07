@@ -6,6 +6,6 @@
 #include <gecode/minimodel.hh>
 
 using namespace Gecode;
-void nqueen_propagator(Space& home, IntVarArgs m);
+void nqueen_propagator(Space& home, IntVarArgs m, int n);
 
 #endif
