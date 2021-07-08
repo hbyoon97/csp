@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <array>
+#include <map>
 
 using namespace Gecode;
 using namespace std;
@@ -28,34 +29,33 @@ class Temperature : public IntMinimizeScript {
 
     // constructor
     Temperature(const SizeOptions& opt) : 
-        IntMinimizeScript(opt), data(inputData), temp(*this, data.readingsLength+1, 21, 35),
-        minCost(*this, 0, 789789), choice(*this, data.readingsLength, IntSet({1, 4, -2, -5, 0})) {
-
-        // initialize temp_nd
-        int temp_nd[data.readingsLength+1];
-        temp_nd[0] = data.start;
-        for(int i = 1; i<data.readingsLength+1; i++){
-            temp_nd[i] = avg(temp_nd[i-1], data.readings[i-1]);
-            cout << temp_nd[i] << endl;
-        }
+        IntMinimizeScript(opt), data(inputData), temp({*this, data.readingsLength+1, 0, 50}),
+        minCost(*this, 0, 123123), choice(*this, data.readingsLength, IntSet({1, 4, -2, -5, 0})) {
         
+        rel(*this, temp[0] == data.start);
+        
+        //read temp_nd and make choice
         for(int i = 0; i<data.readingsLength; i++){
-            if(choice[i].size() == 1){
-                rel(*this, choice[i], IRT_LE, 4);
-            }
+          
+            rel(*this, temp[i+1] == (temp[i] + data.readings[i]) / 2 + choice[i]);
+            rel(*this, (temp[i] + data.readings[i]) / 2 + choice[i] <= 30);
+            rel(*this, (temp[i] + data.readings[i]) / 2 + choice[i] >= 25);
+            
         }
 
-        // branch(*this, temp, INT_VAL_MIN());
+        branch(*this, choice, INT_VAR_SIZE_MIN(), INT_VAL_MIN());
     }
 
     //copy constructor
     Temperature(Temperature& s) : IntMinimizeScript(s) {
+      data = s.data;
       temp.update(*this, s.temp);
+      choice.update(*this, s.choice);
       minCost.update(*this, s.minCost);
     }
 
     virtual IntVar cost(void) const{
-        return minCost;
+      return minCost;
     }
 
     //virtual copy 
@@ -66,7 +66,8 @@ class Temperature : public IntMinimizeScript {
     // Print solution
     virtual void
     print(std::ostream& os) const {
-        //
+        cout << "temp solution" << endl << temp << endl;
+        cout << "corresponding choice" << endl << choice << endl << endl;
     } 
 
     // average function
@@ -81,6 +82,6 @@ int main(int argc, char* argv[]) {
   opt.solutions(0);
   opt.parse(argc, argv);
   // BAB will give optimal
-  Script::run<Temperature,BAB,SizeOptions>(opt);
+  Script::run<Temperature,DFS,SizeOptions>(opt);
   return 0;
 }
