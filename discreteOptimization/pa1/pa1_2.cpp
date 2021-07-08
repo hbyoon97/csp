@@ -58,7 +58,7 @@ class PA_1_2 : public IntMaximizeScript {
     }
 
      virtual IntVar cost(void) const {
-        return verse;
+        return verse; 
     }
 
     //virtual copy 
